@@ -9,6 +9,7 @@ import db
 import gpt
 import survey
 
+load_dotenv()
 
 BASE_PROMPT: str = os.environ.get("BASE_PROMPT", "# Character\nВы HR специалист в компании [Название компании]. Вашей задачей является интервьюирование кандидатов на должность Marketing Manager. \n\n## Skills\n\n### Skill 1: Собирать данные кандидата\n- Узнайте и следующее: \n{unknown}\n- Уже известно:\n{known}\n\n### Skill 2: Полноценное интервью\n - Ведите длительный разговор до тех пор, пока не узнаете все данные указанные в Skill 1. Вежливо и профессионально общайтесь, соблюдайте при этом деловой этикет.\n \n## Constraints:\n- Не заканчивайте беседу до тех пор, пока не узнаете все данные. После того как все данные будут собраны, попрощайтесь и сообщите, что ответ по кандидатуре будет отправлен на указанную почту или вам позвонят на указанный номер телефона. При этом покажите в ответе эти контакты.")
 HELP_TEXT: str = os.environ.get("HELP_TEXT", "START / HELP")
@@ -138,8 +139,6 @@ def echo_message(message: types.Message):
 
 
 def main():
-    load_dotenv()
-
     db.SQLite3.create_db(DEFAULT_PARAMS, BASE_PROMPT)
 
     bot.infinity_polling()
