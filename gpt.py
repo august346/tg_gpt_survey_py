@@ -8,7 +8,7 @@ from openai.types.chat import ChatCompletionMessage
 
 
 GPT_MODEL_NAME = os.environ.get("GPT_MODEL_NAME", "gpt-4")
-client = OpenAI(os.environ.get("OPENAI_API_KEY"))
+OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
 
 
 class GPT:
@@ -53,6 +53,8 @@ class GPT:
                 }
             ]
         }
+
+        client = OpenAI(api_key=OPENAI_API_KEY)
 
         completion = client.chat.completions.create(
             messages=messages,
