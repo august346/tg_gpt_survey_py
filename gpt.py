@@ -7,8 +7,7 @@ from openai import OpenAI
 from openai.types.chat import ChatCompletionMessage
 
 GPT_MODEL_NAME = os.environ.get("GPT_MODEL_NAME", "gpt-4")
-
-client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
+OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
 
 
 class GPT:
@@ -19,6 +18,8 @@ class GPT:
 
     @staticmethod
     def get_question(messages: list[dict], params: Optional[str]) -> tuple[Optional[str], Optional[dict]]:
+        client = OpenAI(OPENAI_API_KEY)
+        
         tools: dict = {} if params is None else {
             "tools": [
                 {
