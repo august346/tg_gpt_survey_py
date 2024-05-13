@@ -1,0 +1,48 @@
+services:
+  bot:
+    build: .
+    restart: always
+    env_file:
+      - .env
+    volumes:
+      - ./data/bot_supervisor_logs:/var/log/supervisor
+    networks:
+      - db_network
+
+  postgres:
+    image: postgres
+    restart: always
+    command: postgres -c 'max_connections=2000'
+    volumes:
+      - ./data/pg_data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_PASSWORD=example
+      - POSTGRES_USER=survey
+      - POSTGRES_DB=survey
+    networks:
+      - db_network
+
+  pgbouncer:
+    image: edoburu/pgbouncer
+    restart: always
+#    platform: linux/amd64   # mac m1
+    environment:
+      - DB_USER=survey
+      - DB_PASSWORD=example
+      - DB_HOST=postgres
+      - DB_NAME=survey
+      - POOL_MODE=transaction
+      - ADMIN_USERS=postgres,survey
+      - MAX_CLIENT_CONN=2000
+      - DEFAULT_POOL_SIZE=100
+      - AUTH_TYPE=plain
+    depends_on:
+      - postgres
+    networks:
+      - db_network
+    ports:
+      - "5434:5432"
+
+networks:
+  db_network:
+    driver: bridge
