@@ -9,7 +9,6 @@ from survey import (db, gpt, survey, utils)
 
 
 logging.basicConfig(level=logging.INFO)
-logger = logging.Logger(__name__, logging.INFO)
 
 DB_URL: str = os.environ.get("DB_URL", "postgresql://survey:example@localhost:5434/survey")
 
@@ -26,8 +25,8 @@ DEFAULT_PARAMS: list[str] = utils.extract_params_from_text(
 )
 HELP_TEXT: str = os.environ.get("HELP_TEXT", "START / HELP")
 
-LIMIT_HISTORY: int = 7000
-START_TOKENS: int = 20000
+LIMIT_HISTORY: int = 7_000
+START_TOKENS: int = 20_000
 
 TG_API_TOKEN: str = os.environ["TG_API_TOKEN"]
 
@@ -86,7 +85,10 @@ def process_chat(tg_chat_id: int, user_text: str, bot):
     user_survey = survey.UserSurvey(str(tg_chat_id), survey.Survey(params), bot.db, START_TOKENS)
 
     if user_survey.get_tokens() < 1:
-        logger.info(f"{tg_chat_id} no tokens")
+        logging.info(f"{tg_chat_id} no tokens")
+        return
+
+    bot.send_chat_action(tg_chat_id, "typing")
 
     user_survey.add_user_answer(user_text)
 
@@ -148,7 +150,6 @@ def set_params(message: types.Message, bot):
 
 
 def answer(message: types.Message, bot):
-    bot.send_chat_action(message.chat.id, "typing")
     process_chat(message.chat.id, message.text, bot)
 
 

@@ -25,19 +25,19 @@ class UserSurvey:
 
     @property
     def _data(self) -> dict:
-        return self._db.get_chat_data(self.tg_chat_id) or {"tokens": self._start_tokens}
+        return self._db.get_chat_data(self.tg_chat_id) or {}
 
     def get_tokens(self) -> int:
-        if "tokens" not in self._data:
-            self._data["tokens"] = self._start_tokens
-
-        return self._data["tokens"]
+        return self._data.get("tokens") or self._start_tokens
 
     def deduct_tokens(self, tokens: int):
-        if "tokens" not in self._data:
-            self._data["tokens"] = self._start_tokens
+        data: dict = self._data
+        if "tokens" not in data:
+            data["tokens"] = self._start_tokens
 
-        self._data["tokens"] -= tokens
+        data["tokens"] -= tokens
+
+        self._db.set_chat_data(self.tg_chat_id, data)
 
     def get_params(self) -> list[Param]:
         stored_params: dict = self._data.get("params") or {}
