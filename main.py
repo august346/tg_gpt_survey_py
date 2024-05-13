@@ -10,7 +10,7 @@ from survey import (db, gpt, survey, utils)
 
 logging.basicConfig(level=logging.INFO)
 
-DB_URL: str = os.environ.get("DB_URL", "postgresql://survey:example@localhost:5434/survey")
+DB_URL: str = os.environ.get("DB_URL", "postgresql://survey:example@pgbouncer/survey")
 
 BASE_PROMPT: str = os.environ.get(
     "BASE_PROMPT",
@@ -29,6 +29,7 @@ LIMIT_HISTORY: int = 7_000
 START_TOKENS: int = 20_000
 
 TG_API_TOKEN: str = os.environ["TG_API_TOKEN"]
+TG_PARAMS: list[str] = ["username"]
 
 
 def _(key: str) -> str:
@@ -109,7 +110,7 @@ def export_csv(message: types.Message, bot):
                 mode='w', dir="./", encoding="utf-8-sig", delete=False, suffix=".csv"
         ) as temp_file:
             params, _ = bot.db.get_params_and_prompt()
-            bot.db.write_file(temp_file, params)
+            bot.db.write_file(temp_file, params, TG_PARAMS)
 
         with open(temp_file.name, "rb") as csv_file:
             bot.send_document(message.chat.id, csv_file)
@@ -150,6 +151,7 @@ def set_params(message: types.Message, bot):
 
 
 def answer(message: types.Message, bot):
+    bot.db.create_if_not_exist(str(message.chat.id), message.chat.username)
     process_chat(message.chat.id, message.text, bot)
 
 

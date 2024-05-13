@@ -1,12 +1,17 @@
 import csv
+import enum
 import json
-from typing import Optional
+from typing import Optional, Any
 from sqlalchemy import create_engine, Column, Integer, String, JSON
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 
 
 Base = declarative_base()
+
+
+class TgParam(enum.Enum):
+    username = "username"
 
 
 class Config(Base):
@@ -21,6 +26,7 @@ class User(Base):
 
     id = Column(Integer, primary_key=True)
     tg_chat_id = Column(String)
+    tg_data = Column(JSON)
     data = Column(JSON)
 
 
@@ -53,9 +59,20 @@ class SQLAlchemy:
         with self.Session() as session:
             user = session.query(User).filter_by(tg_chat_id=tg_chat_id).first()
             if user:
-                user.data = json.dumps(data)
+                user.data = json.dumps(data, ensure_ascii=False)
             else:
-                user = User(tg_chat_id=tg_chat_id, data=json.dumps(data))
+                user = User(tg_chat_id=tg_chat_id, data=json.dumps(data, ensure_ascii=False))
+                session.add(user)
+            session.commit()
+
+    def create_if_not_exist(self, tg_chat_id: str, tg_username: str):
+        tg_data = json.dumps({TgParam.username.value: tg_username}, ensure_ascii=False)
+        with self.Session() as session:
+            user = session.query(User).filter_by(tg_chat_id=tg_chat_id).first()
+            if user:
+                user.tg_data = tg_data
+            else:
+                user = User(tg_chat_id=tg_chat_id, tg_data=tg_data, data=json.dumps({}, ensure_ascii=False))
                 session.add(user)
             session.commit()
 
@@ -64,15 +81,24 @@ class SQLAlchemy:
             session.query(User).delete()
             session.commit()
 
-    def write_file(self, temp_file, params: list[str]):
+    def write_file(self, temp_file, params: list[str], tg_params: list[str]):
+        def formatted_username_or_same(key: str, value: str) -> Any:
+            if key != TgParam.username.value:
+                return value
+
+            return value and f"@{value}"
+
         with self.Session() as session:
-            rows = session.query(User.data).all()
-            to_write = [params]
+            rows = session.query(User.tg_data, User.data).all()
+            to_write = [[*tg_params, *params]]
             for row in rows:
-                data = json.loads(row[0]) if row[0] else {}
+                tg_data, data = (json.loads(row[i]) if row[i] else {} for i in range(2))
                 params = data.get("params", {})
                 max_ind = max([int(k) for k in params.keys()] or [0])
-                to_append = [params.get(str(i), None) for i in range(max_ind + 1)]
+                to_append = [
+                    *(formatted_username_or_same(p, tg_data.get(p)) for p in tg_params),
+                    *(params.get(str(i), None) for i in range(max_ind + 1))
+                ]
                 to_write.append(to_append)
             if not to_write:
                 to_write = [["empty"]]
