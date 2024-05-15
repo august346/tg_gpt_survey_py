@@ -25,8 +25,8 @@ DEFAULT_PARAMS: list[str] = utils.extract_params_from_text(
 )
 HELP_TEXT: str = os.environ.get("HELP_TEXT", "START / HELP")
 
-LIMIT_HISTORY: int = 7_000
-START_TOKENS: int = 20_000
+LIMIT_HISTORY: int = int(os.environ.get("LIMIT_HISTORY", 7_000))
+START_TOKENS: int = int(os.environ.get("START_TOKENS", 50_000))
 
 TG_API_TOKEN: str = os.environ["TG_API_TOKEN"]
 TG_PARAMS: list[str] = ["username"]
@@ -150,6 +150,20 @@ def set_params(message: types.Message, bot):
     bot.reply_to(message, _("new_params_set"))
 
 
+def give_me_tokens(message: types.Message, bot):
+    text = message.text.split('/give_me_tokens', 1)[-1].strip()
+
+    if not all([text, text.isdigit()]):
+        bot.reply_to(message, _("invalid_tokens"))
+        return
+
+    params, __ = bot.db.get_params_and_prompt()
+    user_survey = survey.UserSurvey(str(message.chat.id), survey.Survey(params), bot.db, START_TOKENS)
+    user_survey.deduct_tokens(-int(text))
+
+    bot.reply_to(message, _("tokens_added"))
+
+
 def answer(message: types.Message, bot):
     bot.db.create_if_not_exist(str(message.chat.id), message.chat.username)
     process_chat(message.chat.id, message.text, bot)
@@ -167,6 +181,7 @@ def main():
     bot.register_message_handler(clear, commands=["clear"], pass_bot=True)
     bot.register_message_handler(set_prompt, commands=["set_prompt"], pass_bot=True)
     bot.register_message_handler(set_params, commands=["set_params"], pass_bot=True)
+    bot.register_message_handler(give_me_tokens, commands=["give_me_tokens"], pass_bot=True)
     bot.register_message_handler(answer, func=lambda message: True, pass_bot=True)
 
     logging.info("bot started")

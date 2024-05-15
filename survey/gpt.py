@@ -7,7 +7,7 @@ from openai import OpenAI
 from openai.types.chat import ChatCompletionMessage
 
 
-GPT_MODEL_NAME = os.environ.get("GPT_MODEL_NAME", "gpt-4")
+GPT_MODEL_NAME = os.environ.get("GPT_MODEL_NAME", "gpt-4o")
 OPENAI_API_KEY = os.environ["OPENAI_API_KEY"]
 
 
