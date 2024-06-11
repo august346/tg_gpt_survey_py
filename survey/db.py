@@ -1,8 +1,10 @@
 import csv
 import enum
 import json
+import logging
 from typing import Optional, Any
 from sqlalchemy import create_engine, Column, Integer, String, JSON
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 
@@ -30,6 +32,13 @@ class User(Base):
     data = Column(JSON)
 
 
+class Vacancy(Base):
+    __tablename__ = 'vacancy'
+
+    id = Column(Integer, primary_key=True)
+    name = Column(String, unique=True)
+
+
 class SQLAlchemy:
     def __init__(self, db_url):
         self.engine = create_engine(db_url)
@@ -54,6 +63,11 @@ class SQLAlchemy:
         with self.Session() as session:
             user = session.query(User).filter_by(tg_chat_id=tg_chat_id).first()
             return json.loads(user.data) if user else None
+
+    def get_tg_data(self, tg_chat_id: str) -> Optional[dict]:
+        with self.Session() as session:
+            user = session.query(User).filter_by(tg_chat_id=tg_chat_id).first()
+            return json.loads(user.tg_data) if user else None
 
     def set_chat_data(self, tg_chat_id: str, data: dict):
         with self.Session() as session:
@@ -119,3 +133,24 @@ class SQLAlchemy:
             config = Config(data=json.dumps({"params": params, "prompt": prompt}, ensure_ascii=False))
             session.add(config)
             session.commit()
+
+    def set_new_vacancies(self, values: list[str]):
+        with self.Session() as session:
+            try:
+                session.query(Vacancy).delete()
+
+                new_vacancies = [Vacancy(name=name) for name in values]
+                session.add_all(new_vacancies)
+
+                session.commit()
+            except SQLAlchemyError as e:
+                session.rollback()
+                logging.error(f"An error occurred while setting new vacancies: {e}")
+
+    def get_vacancies(self):
+        with self.Session() as session:
+            return list(session.query(Vacancy).all())
+
+    def get_vacancy_name_by_id(self, value: int):
+        with self.Session() as session:
+            return session.query(Vacancy).filter_by(id=value).first()

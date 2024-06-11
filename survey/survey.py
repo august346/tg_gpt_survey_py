@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from typing import Optional
 
-from . import db, gpt
+from . import db, gpt, tasks
 
 
 @dataclass
@@ -26,6 +26,10 @@ class UserSurvey:
     @property
     def _data(self) -> dict:
         return self._db.get_chat_data(self.tg_chat_id) or {}
+
+    @property
+    def _tg_username(self) -> Optional[str]:
+        return (self._db.get_tg_data(self.tg_chat_id) or {}).get(db.TgParam.username.value)
 
     def get_tokens(self) -> int:
         return self._data.get("tokens") or self._start_tokens
@@ -81,3 +85,42 @@ class UserSurvey:
 
     def add_func_call_result(self, call_id: str, func_name: str, func_resp: str):
         self._add_message({"role": "tool", "content": func_resp, "tool_call_id": call_id, "name": func_name})
+
+    def get_vacancy(self) -> Optional[str]:
+        return self._data.get("vacancy")
+
+    def set_vacancy(self, value: str):
+        data: dict = self._data
+        data["vacancy"] = value
+
+        self._db.set_chat_data(self.tg_chat_id, data)
+
+    def get_resume_key(self) -> Optional[str]:
+        return self._data.get("resume")
+
+    def set_resume_key(self, value: str):
+        data: dict = self._data
+        data["resume"] = value
+
+        self._db.set_chat_data(self.tg_chat_id, data)
+
+    def send_short_to_crm(self):
+        tasks.integrate_with_crm.delay({
+            "telegram_username": self._tg_username,
+            "position": self.get_vacancy(),
+        }, self.get_resume_key() or None)
+
+    def send_full_to_crm(self):
+        tasks.send_full_to_srm.delay(self.tg_chat_id)
+
+    def is_finished(self) -> bool:
+        return self._data.get("is_finished") or False
+
+    def finalize(self):
+        data: dict = self._data
+        data["is_finished"] = True
+
+        data: dict = self._data
+        data["params"] = {}
+
+        self._db.set_chat_data(self.tg_chat_id, data)

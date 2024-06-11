@@ -8,6 +8,7 @@ services:
       - ./data/bot_supervisor_logs:/var/log/supervisor
     networks:
       - db_network
+      - minio_network
 
   postgres:
     image: postgres
@@ -43,6 +44,22 @@ services:
 #    ports:
 #      - "5434:5432"
 
+  minio:
+    image: minio/minio
+    restart: always
+    environment:
+      - MINIO_ACCESS_KEY=minio
+      - MINIO_SECRET_KEY=minio123
+    command: server /data
+    volumes:
+      - ./data/minio_data:/data
+    networks:
+      - minio_network
+#    ports:
+#      - 9000:9000
+
 networks:
   db_network:
+    driver: bridge
+  minio_network:
     driver: bridge

@@ -1,0 +1,6 @@
+Your task is to categorize the collected parameters and send them to the CRM system in the appropriate format.
+Some parameters may be called differently, but CRM has a rigid structure. Select/sort the right parameters and send the data to CRM.
+Params:
+```
+<params>
+```

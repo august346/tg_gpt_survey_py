@@ -1,12 +1,12 @@
 import logging
 import os
 import tempfile
+from typing import Optional
 
 import telebot
 from telebot import types
 
-from survey import (db, gpt, survey, utils)
-
+from survey import (db, gpt, survey, utils, storage)
 
 logging.basicConfig(level=logging.INFO)
 
@@ -32,6 +32,11 @@ TG_API_TOKEN: str = os.environ["TG_API_TOKEN"]
 TG_PARAMS: list[str] = ["username"]
 
 
+class MyBot(telebot.TeleBot):
+    db: db.SQLAlchemy
+    minio: storage.MinioClient
+
+
 def _(key: str) -> str:
     return utils.get_text(key, "ru")
 
@@ -40,16 +45,18 @@ def get_question(user_survey: survey.UserSurvey, prompt: str, counter: int = 0) 
     if counter >= 3:
         raise Exception("foo")
 
+    without_answers: int = 0
     params: list[str] = []
     for p in user_survey.get_params():
-        new_line: str = f"[{p.index}] - {p.name} - " + (
-            "? (need to ask)"
-            if p.value is None
-            else f"{p.value} (already set)"
-        ) + "\n"
+        if p.value is None:
+            to_add = "? (need to ask)"
+            without_answers -= 1
+        else:
+            to_add = f"{p.value} (already set)"
+        new_line = f"[{p.index}] - {p.name} - " + to_add + "\n"
         params.append(new_line)
 
-    system_message: str = prompt.format(data="\n".join(params))
+    system_message: str = prompt.format(data="\n".join(params) if params else _("all_data_collected"))
 
     len_counter: int = len(system_message)
 
@@ -75,15 +82,27 @@ def get_question(user_survey: survey.UserSurvey, prompt: str, counter: int = 0) 
             user_survey.add_func_call_result(call["call_id"], "set_param", "success")
         return get_question(user_survey, prompt, counter + 1)
 
+    no_more_questions: bool = sum([-1 if p.value is None else 0 for p in user_survey.get_params()]) == 0
+    if without_answers < 0 and no_more_questions:
+        user_survey.send_full_to_crm()
+
     if not question:
-        raise Exception("bar")
+        raise Exception("Didn't get question from gpt api")
 
     return question
 
 
-def process_chat(tg_chat_id: int, user_text: str, bot):
+def process_chat(tg_chat_id: int, user_text: str, bot: MyBot):
     params, prompt = bot.db.get_params_and_prompt()
     user_survey = survey.UserSurvey(str(tg_chat_id), survey.Survey(params), bot.db, START_TOKENS)
+
+    if not user_survey.get_vacancy() is None:
+        send_vacancies(tg_chat_id, "vacancies", bot)
+        return
+
+    if user_survey.get_resume_key() is None:
+        ask_about_resume(tg_chat_id, bot)
+        return
 
     if user_survey.get_tokens() < 1:
         logging.info(f"{tg_chat_id} no tokens")
@@ -100,11 +119,11 @@ def process_chat(tg_chat_id: int, user_text: str, bot):
     bot.send_message(tg_chat_id, question)
 
 
-def send_welcome(message: types.Message, bot):
-    bot.reply_to(message, HELP_TEXT)
+def send_welcome(message: types.Message, bot: MyBot):
+    send_vacancies(message.chat.id, "vacancies", bot)
 
 
-def export_csv(message: types.Message, bot):
+def export_csv(message: types.Message, bot: MyBot):
     try:
         with tempfile.NamedTemporaryFile(
                 mode='w', dir="./", encoding="utf-8-sig", delete=False, suffix=".csv"
@@ -118,13 +137,13 @@ def export_csv(message: types.Message, bot):
         os.remove(temp_file.name)
 
 
-def clear(message: types.Message, bot):
+def clear(message: types.Message, bot: MyBot):
     bot.db.clear()
 
     bot.send_message(message.chat.id, _("db_cleaned"))
 
 
-def set_prompt(message: types.Message, bot):
+def set_prompt(message: types.Message, bot: MyBot):
     text = message.text.split('/set_prompt', 1)[-1].strip()
 
     if not all(word in text for word in ["{data}"]):
@@ -137,7 +156,7 @@ def set_prompt(message: types.Message, bot):
     bot.reply_to(message, _("new_prompt_set"))
 
 
-def set_params(message: types.Message, bot):
+def set_params(message: types.Message, bot: MyBot):
     text = message.text.split('/set_params', 1)[-1].strip()
 
     if not text:
@@ -150,7 +169,7 @@ def set_params(message: types.Message, bot):
     bot.reply_to(message, _("new_params_set"))
 
 
-def give_me_tokens(message: types.Message, bot):
+def give_me_tokens(message: types.Message, bot: MyBot):
     text = message.text.split('/give_me_tokens', 1)[-1].strip()
 
     if not all([text, text.isdigit()]):
@@ -164,17 +183,146 @@ def give_me_tokens(message: types.Message, bot):
     bot.reply_to(message, _("tokens_added"))
 
 
-def answer(message: types.Message, bot):
+def answer(message: types.Message, bot: MyBot):
     bot.db.create_if_not_exist(str(message.chat.id), message.chat.username)
     process_chat(message.chat.id, message.text, bot)
+
+
+def send_vacancies(chat_id: int, text: str, bot: MyBot):
+    markup = types.InlineKeyboardMarkup()
+    buttons = list(
+        map(
+            lambda v: types.InlineKeyboardButton(text=v.name, callback_data=f"set_vacancy:{v.id}"),
+            bot.db.get_vacancies()
+        )
+    )
+    markup.add(*buttons)
+    bot.send_message(chat_id, _(text), reply_markup=markup)
+
+
+def set_vacancy(call: types.CallbackQuery, bot: MyBot):
+    vacancy_id: int = int(call.data.split(":")[1])
+    tg_chat_id: int = call.message.chat.id
+
+    vacancy: Optional[db.Vacancy] = bot.db.get_vacancy_name_by_id(vacancy_id)
+    if vacancy is None:
+        send_vacancies(tg_chat_id, "old_vacancies", bot)
+        return
+
+    params, __ = bot.db.get_params_and_prompt()
+    survey.UserSurvey(str(tg_chat_id), survey.Survey(params), bot.db, START_TOKENS).set_vacancy(vacancy.name)
+
+    bot.delete_message(tg_chat_id, call.message.id)
+    ask_about_resume(tg_chat_id, bot)
+
+
+def ask_about_resume(tg_chat_id: int, bot: MyBot):
+    markup = types.InlineKeyboardMarkup()
+    markup.add(
+        types.InlineKeyboardButton(
+            text=_("want_to_send_resume"),
+            callback_data="want_to_send_resume"
+        )
+    )
+    markup.add(
+        types.InlineKeyboardButton(
+            text=_("skip_send_resume"),
+            callback_data="skip_send_resume"
+        )
+    )
+    bot.send_message(tg_chat_id, _("ask_resume"), reply_markup=markup)
+
+
+def want_to_send_resume(call: types.CallbackQuery, bot: MyBot):
+    tg_chat_id: int = call.message.chat.id
+
+    markup = types.InlineKeyboardMarkup()
+    markup.add(
+        markup.add(
+            types.InlineKeyboardButton(
+                text=_("skip_send_resume"),
+                callback_data="skip_send_resume"
+            )
+        )
+    )
+
+    bot.delete_message(tg_chat_id, call.message.id)
+    bot.send_message(tg_chat_id, _("welcome_send_resume"), reply_markup=markup)
+
+
+def skip_send_resume(call: types.CallbackQuery, bot: MyBot):
+    tg_chat_id: int = call.message.chat.id
+
+    params, __ = bot.db.get_params_and_prompt()
+    user_survey = survey.UserSurvey(str(tg_chat_id), survey.Survey(params), bot.db, START_TOKENS)
+    if user_survey.get_resume_key() is None:
+        user_survey.set_resume_key("")
+
+    bot.delete_message(tg_chat_id, call.message.id)
+    process_chat(tg_chat_id, _("lets_go"), bot)
+
+
+def handle_document(message: types.Message, bot: MyBot):
+    tg_chat_id: int = message.chat.id
+
+    document = message.document
+    file_info = bot.get_file(document.file_id)
+    data = bot.download_file(file_info.file_path)
+
+    params, __ = bot.db.get_params_and_prompt()
+    survey.UserSurvey(str(tg_chat_id), survey.Survey(params), bot.db, START_TOKENS).set_resume_key(
+        bot.minio.save(
+            document.file_name,
+            data,
+            message.content_type,
+            document.file_size,
+        )
+    )
+
+    bot.reply_to(message, _("document_uploaded"))
+
+    markup = types.InlineKeyboardMarkup()
+    markup.add(
+        types.InlineKeyboardButton(
+            text=_("send_cv_and_finish"),
+            callback_data="send_cv_and_finish"
+        )
+    )
+    markup.add(
+        types.InlineKeyboardButton(
+            text=_("go_to_survey"),
+            callback_data="go_to_survey"
+        )
+    )
+    bot.send_message(tg_chat_id, _("document_uploaded"), reply_markup=markup)
+
+
+def go_to_survey(call: types.CallbackQuery, bot: MyBot):
+    process_chat(call.message.chat.id, _("lets_go"), bot)
+
+
+def send_cv_and_finish(call: types.CallbackQuery, bot: MyBot):
+    tg_chat_id: int = call.message.chat.id
+
+    params, __ = bot.db.get_params_and_prompt()
+    user_survey = survey.UserSurvey(str(tg_chat_id), survey.Survey(params), bot.db, START_TOKENS)
+
+    user_survey.send_short_to_crm()
+    user_survey.finalize()
+
+    process_chat(call.message.chat.id, _("the_end"), bot)
 
 
 def main():
     sql_alchemy = db.SQLAlchemy(DB_URL)
     sql_alchemy.create_db(DEFAULT_PARAMS, BASE_PROMPT)
 
+    minio = storage.MinioClient()
+    minio.create_buckets()
+
     bot = telebot.TeleBot(TG_API_TOKEN)
     bot.db = sql_alchemy
+    bot.minio = minio
 
     bot.register_message_handler(send_welcome, commands=['help', 'start'], pass_bot=True)
     bot.register_message_handler(export_csv, commands=["export_csv"], pass_bot=True)
@@ -183,6 +331,17 @@ def main():
     bot.register_message_handler(set_params, commands=["set_params"], pass_bot=True)
     bot.register_message_handler(give_me_tokens, commands=["give_me_tokens"], pass_bot=True)
     bot.register_message_handler(answer, func=lambda message: True, pass_bot=True)
+    bot.register_message_handler(handle_document, content_types=['document'], pass_bot=True)
+    bot.register_callback_query_handler(
+        set_vacancy, func=lambda call: call.data.startswith("set_vacancy:"), pass_bot=True
+    )
+    bot.register_callback_query_handler(
+        want_to_send_resume, func=lambda call: call.data == "want_to_send_resume", pass_bot=True
+    )
+    bot.register_callback_query_handler(
+        skip_send_resume, func=lambda call: call.data == "skip_send_resume", pass_bot=True
+    )
+    bot.register_callback_query_handler(go_to_survey, func=lambda call: call.data == "go_to_survey", pass_bot=True)
 
     logging.info("bot started")
     bot.infinity_polling()
