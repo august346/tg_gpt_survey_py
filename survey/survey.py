@@ -44,7 +44,11 @@ class UserSurvey:
         self._db.set_chat_data(self.tg_chat_id, data)
 
     def get_params(self) -> list[Param]:
-        stored_params: dict = self._data.get("params") or {}
+        data: dict = self._data
+        if data.get("is_finished"):
+            return []
+
+        stored_params: dict = data.get("params") or {}
 
         return [
             Param(**{"index": str(ind), "name": param, "value": stored_params.get(str(ind))})
@@ -119,8 +123,5 @@ class UserSurvey:
     def finalize(self):
         data: dict = self._data
         data["is_finished"] = True
-
-        data: dict = self._data
-        data["params"] = {}
 
         self._db.set_chat_data(self.tg_chat_id, data)

@@ -96,7 +96,7 @@ def process_chat(tg_chat_id: int, user_text: str, bot: MyBot):
     params, prompt = bot.db.get_params_and_prompt()
     user_survey = survey.UserSurvey(str(tg_chat_id), survey.Survey(params), bot.db, START_TOKENS)
 
-    if not user_survey.get_vacancy() is None:
+    if user_survey.get_vacancy() is None:
         send_vacancies(tg_chat_id, "vacancies", bot)
         return
 
@@ -189,7 +189,7 @@ def answer(message: types.Message, bot: MyBot):
 
 
 def send_vacancies(chat_id: int, text: str, bot: MyBot):
-    markup = types.InlineKeyboardMarkup()
+    markup = types.InlineKeyboardMarkup(row_width=1)
     buttons = list(
         map(
             lambda v: types.InlineKeyboardButton(text=v.name, callback_data=f"set_vacancy:{v.id}"),
@@ -238,11 +238,9 @@ def want_to_send_resume(call: types.CallbackQuery, bot: MyBot):
 
     markup = types.InlineKeyboardMarkup()
     markup.add(
-        markup.add(
-            types.InlineKeyboardButton(
-                text=_("skip_send_resume"),
-                callback_data="skip_send_resume"
-            )
+        types.InlineKeyboardButton(
+            text=_("skip_send_resume"),
+            callback_data="skip_send_resume"
         )
     )
 
@@ -279,8 +277,6 @@ def handle_document(message: types.Message, bot: MyBot):
         )
     )
 
-    bot.reply_to(message, _("document_uploaded"))
-
     markup = types.InlineKeyboardMarkup()
     markup.add(
         types.InlineKeyboardButton(
@@ -298,6 +294,9 @@ def handle_document(message: types.Message, bot: MyBot):
 
 
 def go_to_survey(call: types.CallbackQuery, bot: MyBot):
+    tg_chat_id: int = call.message.chat.id
+
+    bot.delete_message(tg_chat_id, call.message.id)
     process_chat(call.message.chat.id, _("lets_go"), bot)
 
 
@@ -310,6 +309,7 @@ def send_cv_and_finish(call: types.CallbackQuery, bot: MyBot):
     user_survey.send_short_to_crm()
     user_survey.finalize()
 
+    bot.delete_message(tg_chat_id, call.message.id)
     process_chat(call.message.chat.id, _("the_end"), bot)
 
 
@@ -330,8 +330,8 @@ def main():
     bot.register_message_handler(set_prompt, commands=["set_prompt"], pass_bot=True)
     bot.register_message_handler(set_params, commands=["set_params"], pass_bot=True)
     bot.register_message_handler(give_me_tokens, commands=["give_me_tokens"], pass_bot=True)
-    bot.register_message_handler(answer, func=lambda message: True, pass_bot=True)
     bot.register_message_handler(handle_document, content_types=['document'], pass_bot=True)
+    bot.register_message_handler(answer, func=lambda message: True, pass_bot=True)
     bot.register_callback_query_handler(
         set_vacancy, func=lambda call: call.data.startswith("set_vacancy:"), pass_bot=True
     )
@@ -340,6 +340,9 @@ def main():
     )
     bot.register_callback_query_handler(
         skip_send_resume, func=lambda call: call.data == "skip_send_resume", pass_bot=True
+    )
+    bot.register_callback_query_handler(
+        send_cv_and_finish, func=lambda call: call.data == "send_cv_and_finish", pass_bot=True
     )
     bot.register_callback_query_handler(go_to_survey, func=lambda call: call.data == "go_to_survey", pass_bot=True)
 

@@ -1,14 +1,15 @@
 services:
-  bot:
-    build: .
-    restart: always
-    env_file:
-      - .env
-    volumes:
-      - ./data/bot_supervisor_logs:/var/log/supervisor
-    networks:
-      - db_network
-      - minio_network
+#  bot:
+#    build: .
+#    restart: always
+#    env_file:
+#      - .env
+#    volumes:
+#      - ./data/bot_supervisor_logs:/var/log/supervisor
+#    networks:
+#      - db_network
+#      - minio_network
+#      - redis_network
 
   postgres:
     image: postgres
@@ -41,8 +42,8 @@ services:
       - postgres
     networks:
       - db_network
-#    ports:
-#      - "5434:5432"
+    ports:
+      - "5434:5432"
 
   minio:
     image: minio/minio
@@ -55,11 +56,25 @@ services:
       - ./data/minio_data:/data
     networks:
       - minio_network
-#    ports:
-#      - 9000:9000
+    ports:
+      - 9000:9000
+
+  redis:
+    image: redis:latest
+    restart: always
+    environment:
+      - REDIS_PASSWORD=password
+    volumes:
+      - ./data/redis:/data
+    networks:
+      - redis_network
+    ports:
+      - "6380:6379"
 
 networks:
   db_network:
     driver: bridge
   minio_network:
+    driver: bridge
+  redis_network:
     driver: bridge

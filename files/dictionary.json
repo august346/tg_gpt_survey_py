@@ -35,7 +35,7 @@
   "want_to_send_resume": {
     "ru": "Отправить готовое резюме"
   },
-  "skip_resume": {
+  "skip_send_resume": {
     "ru": "Приступить к анкетированию"
   },
   "ask_resume": {
