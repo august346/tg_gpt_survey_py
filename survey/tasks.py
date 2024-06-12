@@ -74,6 +74,8 @@ def send_full_to_srm(tg_chat_id: int):
     user_survey = survey.UserSurvey(str(tg_chat_id), survey.Survey(params), sql_alchemy, START_TOKENS)
 
     params = user_survey.get_params()
-    full: dict = gpt.GPT.get_crm_data(list(map(asdict, params)))
+    full: dict = gpt.GPT.get_crm_data(list(map(asdict, params))) | (
+        {"telegram_username": tg_username} if (tg_username := user_survey.get_tg_username()) else {}
+    )
 
     integrate_with_crm.delay(full, user_survey.get_resume_key() or None)

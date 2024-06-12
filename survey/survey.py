@@ -31,6 +31,9 @@ class UserSurvey:
     def _tg_username(self) -> Optional[str]:
         return (self._db.get_tg_data(self.tg_chat_id) or {}).get(db.TgParam.username.value)
 
+    def get_tg_username(self) -> Optional[str]:
+        return self._tg_username
+
     def get_tokens(self) -> int:
         return self._data.get("tokens") or self._start_tokens
 
