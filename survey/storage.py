@@ -4,11 +4,11 @@ import uuid
 
 from minio import Minio, S3Error
 
-MINIO_URL = os.environ['MINIO_URL']
-MINIO_ACCESS_KEY = os.environ['MINIO_ACCESS_KEY']
-MINIO_SECRET_KEY = os.environ['MINIO_SECRET_KEY']
+MINIO_URL = os.environ.get('MINIO_URL', 'minio:9000')
+MINIO_ACCESS_KEY = os.environ.get('MINIO_ACCESS_KEY', 'minio')
+MINIO_SECRET_KEY = os.environ.get('MINIO_SECRET_KEY', 'minio123')
 
-MINIO_BUCKET_NAME = os.environ['MINIO_BUCKET_NAME']
+MINIO_BUCKET_NAME = os.environ.get('MINIO_BUCKET_NAME', 'cvs')
 
 
 class MinioClient:

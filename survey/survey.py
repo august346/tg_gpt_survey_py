@@ -119,12 +119,3 @@ class UserSurvey:
 
     def send_full_to_crm(self):
         tasks.send_full_to_srm.delay(self.tg_chat_id)
-
-    def is_finished(self) -> bool:
-        return self._data.get("is_finished") or False
-
-    def finalize(self):
-        data: dict = self._data
-        data["is_finished"] = True
-
-        self._db.set_chat_data(self.tg_chat_id, data)

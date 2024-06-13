@@ -56,7 +56,7 @@ def get_question(user_survey: survey.UserSurvey, prompt: str, counter: int = 0) 
         new_line = f"[{p.index}] - {p.name} - " + to_add + "\n"
         params.append(new_line)
 
-    system_message: str = prompt.format(data="\n".join(params) if params else _("all_data_collected"))
+    system_message: str = prompt.format(data="\n".join(params))
 
     len_counter: int = len(system_message)
 
@@ -80,11 +80,12 @@ def get_question(user_survey: survey.UserSurvey, prompt: str, counter: int = 0) 
             args = call["args"]
             user_survey.set_param(args["index"], args["value"])
             user_survey.add_func_call_result(call["call_id"], "set_param", "success")
-        return get_question(user_survey, prompt, counter + 1)
 
-    no_more_questions: bool = sum([-1 if p.value is None else 0 for p in user_survey.get_params()]) == 0
-    if without_answers < 0 and no_more_questions:
-        user_survey.send_full_to_crm()
+        no_more_questions: bool = sum([-1 if p.value is None else 0 for p in user_survey.get_params()]) == 0
+        if without_answers < 0 and no_more_questions:
+            user_survey.send_full_to_crm()
+
+        return get_question(user_survey, prompt, counter + 1)
 
     if not question:
         raise Exception("Didn't get question from gpt api")
@@ -263,54 +264,78 @@ def skip_send_resume(call: types.CallbackQuery, bot: MyBot):
 def handle_document(message: types.Message, bot: MyBot):
     tg_chat_id: int = message.chat.id
 
-    document = message.document
-    file_info = bot.get_file(document.file_id)
-    data = bot.download_file(file_info.file_path)
-
     params, __ = bot.db.get_params_and_prompt()
-    survey.UserSurvey(str(tg_chat_id), survey.Survey(params), bot.db, START_TOKENS).set_resume_key(
-        bot.minio.save(
-            document.file_name,
-            data,
-            message.content_type,
-            document.file_size,
-        )
-    )
+    user_survey = survey.UserSurvey(str(tg_chat_id), survey.Survey(params), bot.db, START_TOKENS)
+    if user_survey.get_resume_key():
+        return
+
+    document = message.document
+
+    if document.file_name.rsplit(".", 1)[-1].lower() not in ["pdf", "doc", "docx"]:
+        bot.reply_to(message, _("invalid_cv_format"))
+        return
 
     markup = types.InlineKeyboardMarkup()
     markup.add(
         types.InlineKeyboardButton(
-            text=_("send_cv_and_finish"),
-            callback_data="send_cv_and_finish"
+            text=_("accept_document"),
+            callback_data=f"accept_document"
+        )
+    )
+
+    bot.reply_to(message, _("confirm_document"), reply_markup=markup)
+
+
+def accept_document(call: types.CallbackQuery, bot: MyBot):
+    tg_chat_id: int = call.message.chat.id
+
+    document_message = call.message.reply_to_message
+    document = document_message.document
+    file_info = bot.get_file(document.file_id)
+    data = bot.download_file(file_info.file_path)
+
+    params, __ = bot.db.get_params_and_prompt()
+    user_survey = survey.UserSurvey(str(tg_chat_id), survey.Survey(params), bot.db, START_TOKENS)
+    user_survey.set_resume_key(
+        bot.minio.save(
+            document.file_name,
+            data,
+            document_message.content_type,
+            document.file_size,
+        )
+    )
+    user_survey.send_short_to_crm()
+
+    markup = types.InlineKeyboardMarkup()
+    markup.add(
+        types.InlineKeyboardButton(
+            text=_("confirm_create_new_resume"),
+            callback_data="confirm_create_new_resume"
         )
     )
     markup.add(
         types.InlineKeyboardButton(
-            text=_("go_to_survey"),
-            callback_data="go_to_survey"
+            text=_("finish"),
+            callback_data="finish"
         )
     )
-    bot.send_message(tg_chat_id, _("document_uploaded"), reply_markup=markup)
+
+    bot.delete_message(tg_chat_id, call.message.id)
+    bot.send_message(tg_chat_id, _("ask_create_new_resume"), reply_markup=markup)
 
 
-def go_to_survey(call: types.CallbackQuery, bot: MyBot):
+def confirm_create_new_resume(call: types.CallbackQuery, bot: MyBot):
     tg_chat_id: int = call.message.chat.id
 
     bot.delete_message(tg_chat_id, call.message.id)
     process_chat(call.message.chat.id, _("lets_go"), bot)
 
 
-def send_cv_and_finish(call: types.CallbackQuery, bot: MyBot):
+def finish(call: types.CallbackQuery, bot: MyBot):
     tg_chat_id: int = call.message.chat.id
 
-    params, __ = bot.db.get_params_and_prompt()
-    user_survey = survey.UserSurvey(str(tg_chat_id), survey.Survey(params), bot.db, START_TOKENS)
-
-    user_survey.send_short_to_crm()
-    user_survey.finalize()
-
     bot.delete_message(tg_chat_id, call.message.id)
-    process_chat(call.message.chat.id, _("the_end"), bot)
+    bot.send_message(tg_chat_id, _("thanks_finish"))
 
 
 def main():
@@ -342,9 +367,12 @@ def main():
         skip_send_resume, func=lambda call: call.data == "skip_send_resume", pass_bot=True
     )
     bot.register_callback_query_handler(
-        send_cv_and_finish, func=lambda call: call.data == "send_cv_and_finish", pass_bot=True
+        accept_document, func=lambda call: call.data == "accept_document", pass_bot=True
     )
-    bot.register_callback_query_handler(go_to_survey, func=lambda call: call.data == "go_to_survey", pass_bot=True)
+    bot.register_callback_query_handler(
+        confirm_create_new_resume, func=lambda call: call.data == "confirm_create_new_resume", pass_bot=True
+    )
+    bot.register_callback_query_handler(finish, func=lambda call: call.data == "finish", pass_bot=True)
 
     logging.info("bot started")
     bot.infinity_polling()
