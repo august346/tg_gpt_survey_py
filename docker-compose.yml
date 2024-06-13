@@ -62,7 +62,7 @@ services:
   redis:
     image: redis:latest
     restart: always
-    environment:
+#    environment:
 #      - REDIS_PASSWORD=password
     volumes:
       - ./data/redis:/data
