@@ -5,7 +5,7 @@ from celery.schedules import crontab
 from celery.signals import worker_ready
 
 
-BROKER_URL = os.environ.get("BROKER_URL", "redis://:password@redis:6379/0")
+BROKER_URL = os.environ.get("BROKER_URL", "redis://redis:6379/0")
 BACKEND_URL = os.environ.get("BACKEND_URL", "db+postgresql://survey:example@pgbouncer/survey")
 
 app = Celery('survey',
