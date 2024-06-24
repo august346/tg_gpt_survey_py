@@ -5,13 +5,16 @@ from typing import Optional
 from celery import shared_task
 import requests
 from bs4 import BeautifulSoup
+from requests import Response
 
 from survey import db, survey, gpt
 from survey.storage import MinioClient
 
 DB_URL = os.environ.get("DB_URL", "postgresql://survey:example@pgbouncer/survey")
-CRM_API_KEY = os.environ["CRM_API_KEY"]
+CRM_API_KEY: str = os.environ["CRM_API_KEY"]
 START_TOKENS: int = int(os.environ.get("START_TOKENS", 50_000))
+SOURCE_ID: Optional[str] = None if (sid := os.environ.get("SOURCE_ID")) is None else int(sid)
+CRM_URL: str = "https://smarthr.peopleforce.io/api/public/v2/recruitment/candidates"
 
 
 @shared_task(bind=True, default_retry_delay=60, max_retries=1)
@@ -50,20 +53,22 @@ def integrate_with_crm(self, candidate_data, resume):
         raise self.retry(exc=exc)
 
 
-def add_form(data: dict, resume: Optional[str]):
+def add_form(data: dict, resume: Optional[str]) -> Response:
+    payload = data if SOURCE_ID is None else (data | {"source_id": SOURCE_ID})
+
     response = requests.post(
-        # "https://smarthr.peopleforce.io/api/public/v2/recruitment/candidates",
-        "http://localhost/",
-        data=data,
+        CRM_URL,
+        data=payload,
         headers={
             "Accept": "application/json",
-            "Content-Type": "multipart/form-data",
             "X-API-KEY": CRM_API_KEY,
         },
-        files={'resume': (resume, MinioClient().get(resume))} if resume else None
+        files={'resume': (resume, MinioClient().get(resume), 'application/octet-stream')} if resume else None
     )
 
-    assert response.status_code == 200, f"crm integration response.status_code={response.status_code}"
+    assert response.status_code == 201, f"failed crm integration: code={response.status_code}, text={response.text}"
+
+    return response
 
 
 @shared_task

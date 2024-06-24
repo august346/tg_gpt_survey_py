@@ -23,6 +23,7 @@ CELERY_BROKER_URL=redis://redis:6379/0
 #MINIO_SECRET_KEY=minio123
 #MINIO_BUCKET_NAME=cvs
 #BROKER_URL=redis://redis:6379/0
+#SOURCE_ID=13   # default - without source_id in crm integration request
 ```
 
 ### Bot Commands
