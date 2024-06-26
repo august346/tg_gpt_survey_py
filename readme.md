@@ -30,10 +30,10 @@ CELERY_BROKER_URL=redis://redis:6379/0
 `/help` or `/start` - help text  
 `/export_csv` - get .csv file with collected data  
 `/clear` - clears the database  
-`/set_prompt new prompt text` - change prompt  
+`/prompt new prompt text` - change prompt  
 For changing params, use this format (new parameters separated by line breaks):
 ```text
-/set_params
+/params
 new_param1
 new_param2
 new_param3

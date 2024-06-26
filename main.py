@@ -144,8 +144,13 @@ def clear(message: types.Message, bot: MyBot):
     bot.send_message(message.chat.id, _("db_cleaned"))
 
 
-def set_prompt(message: types.Message, bot: MyBot):
-    text = message.text.split('/set_prompt', 1)[-1].strip()
+def prompt_f(message: types.Message, bot: MyBot):
+    text = message.text.split('/prompt', 1)[-1].strip()
+
+    if not text:
+        __, prompt = bot.db.get_params_and_prompt()
+        bot.send_message(message.chat.id, f"Current prompt:\n{prompt}")
+        return
 
     if not all(word in text for word in ["{data}"]):
         bot.reply_to(message, _("invalid_prompt"))
@@ -157,11 +162,12 @@ def set_prompt(message: types.Message, bot: MyBot):
     bot.reply_to(message, _("new_prompt_set"))
 
 
-def set_params(message: types.Message, bot: MyBot):
-    text = message.text.split('/set_params', 1)[-1].strip()
+def params_f(message: types.Message, bot: MyBot):
+    text = message.text.split('/params', 1)[-1].strip()
 
     if not text:
-        bot.reply_to(message, _("invalid_params"))
+        params, __ = bot.db.get_params_and_prompt()
+        bot.send_message(message.chat.id, f"Current params:\n{'\n'.join(params)}")
         return
 
     bot.db.set_params(utils.extract_params_from_text(text))
@@ -352,8 +358,8 @@ def main():
     bot.register_message_handler(send_welcome, commands=['help', 'start'], pass_bot=True)
     bot.register_message_handler(export_csv, commands=["export_csv"], pass_bot=True)
     bot.register_message_handler(clear, commands=["clear"], pass_bot=True)
-    bot.register_message_handler(set_prompt, commands=["set_prompt"], pass_bot=True)
-    bot.register_message_handler(set_params, commands=["set_params"], pass_bot=True)
+    bot.register_message_handler(prompt_f, commands=["prompt"], pass_bot=True)
+    bot.register_message_handler(params_f, commands=["params"], pass_bot=True)
     bot.register_message_handler(give_me_tokens, commands=["give_me_tokens"], pass_bot=True)
     bot.register_message_handler(handle_document, content_types=['document'], pass_bot=True)
     bot.register_message_handler(answer, func=lambda message: True, pass_bot=True)
