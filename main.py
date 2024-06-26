@@ -121,6 +121,7 @@ def process_chat(tg_chat_id: int, user_text: str, bot: MyBot):
 
 
 def send_welcome(message: types.Message, bot: MyBot):
+    bot.db.create_if_not_exist(str(message.chat.id), message.chat.username)
     send_vacancies(message.chat.id, "vacancies", bot)
 
 
@@ -208,6 +209,7 @@ def send_vacancies(chat_id: int, text: str, bot: MyBot):
 
 
 def set_vacancy(call: types.CallbackQuery, bot: MyBot):
+    bot.db.create_if_not_exist(str(call.message.chat.id), call.message.chat.username)
     vacancy_id: int = int(call.data.split(":")[1])
     tg_chat_id: int = call.message.chat.id
 
