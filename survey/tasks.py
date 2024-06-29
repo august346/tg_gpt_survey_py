@@ -48,7 +48,8 @@ def collect():
 @shared_task(bind=True, default_retry_delay=60, max_retries=3)
 def integrate_with_crm(self, candidate_data, resume):
     try:
-        add_form(candidate_data, resume)
+        response = add_form(candidate_data, resume)
+        return response.status_code, response.text
     except Exception as exc:
         raise self.retry(exc=exc)
 
