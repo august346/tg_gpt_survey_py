@@ -115,6 +115,7 @@ class UserSurvey:
         tasks.integrate_with_crm.delay({
             "telegram_username": self._tg_username,
             "position": self.get_vacancy(),
+            "full_name": "N/A",
         }, self.get_resume_key() or None)
 
     def send_full_to_crm(self):
