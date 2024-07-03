@@ -1,5 +1,6 @@
 import enum
 import json
+import logging
 import os
 from typing import Optional
 
@@ -47,11 +48,19 @@ class GPT:
 
         client = OpenAI(api_key=OPENAI_API_KEY)
 
-        completion = client.chat.completions.create(
-            messages=messages,
-            model=GPT_MODEL_NAME,
-            **tools,
-        )
+        try:
+            completion = client.chat.completions.create(
+                messages=messages,
+                model=GPT_MODEL_NAME,
+                **tools,
+            )
+        except Exception:
+            logging.error(
+                "Failed get completion:\nmessages:\n{}\ntools:\n{}".format(
+                    *(json.dumps(entity, ensure_ascii=False) for entity in (messages, tools))
+                )
+            )
+            raise
 
         message: ChatCompletionMessage = completion.choices[0].message
         tokens: int = completion.usage.total_tokens
