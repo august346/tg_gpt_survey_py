@@ -1,80 +1,142 @@
 {
   "all_data_collected": {
-    "ru": "- все данные собраны, больше ничего не надо. Заканчивайте разговор"
+    "ru": "- все данные собраны, больше ничего не надо. Заканчивайте разговор",
+    "en": "- all data collected, nothing else needed. End the conversation",
+    "es": "- todos los datos recopilados, no se necesita nada más. Terminar la conversación"
   },
   "db_cleaned": {
-    "ru": "База очищена"
+    "ru": "База очищена",
+    "en": "Database cleaned",
+    "es": "Base de datos limpiada"
   },
   "invalid_prompt": {
-    "ru": "Невалидный промпт"
+    "ru": "Невалидный промпт",
+    "en": "Invalid prompt",
+    "es": "Prompt inválido"
   },
   "invalid_params": {
-    "ru": "Невалидные параметры"
+    "ru": "Невалидные параметры",
+    "en": "Invalid parameters",
+    "es": "Parámetros inválidos"
   },
   "new_prompt_set": {
-    "ru": "Новый промт принят. Старые данные удалены."
+    "ru": "Новый промт принят. Старые данные удалены.",
+    "en": "New prompt accepted. Old data deleted.",
+    "es": "Nuevo prompt aceptado. Datos antiguos eliminados."
   },
   "new_params_set": {
-    "ru": "Новые параметры приняты. Старые данные удалены."
+    "ru": "Новые параметры приняты. Старые данные удалены.",
+    "en": "New parameters accepted. Old data deleted.",
+    "es": "Nuevos parámetros aceptados. Datos antiguos eliminados."
   },
   "invalid_tokens": {
-    "ru": "Токены должны бать числом"
+    "ru": "Токены должны бать числом",
+    "en": "Tokens must be a number",
+    "es": "Los tokens deben ser un número"
   },
   "tokens_added": {
-    "ru": "Токены добавлены"
+    "ru": "Токены добавлены",
+    "en": "Tokens added",
+    "es": "Tokens añadidos"
   },
   "vacancies": {
-    "ru": "Выберите вакансию"
+    "ru": "Выберите вакансию",
+    "en": "Choose a vacancy",
+    "es": "Elija una vacante"
   },
   "old_vacancies": {
-    "ru": "Выкансии изменились. Выберите вакансию"
+    "ru": "Выкансии изменились. Выберите вакансию",
+    "en": "Vacancies have changed. Choose a vacancy",
+    "es": "Las vacantes han cambiado. Elija una vacante"
   },
   "lets_go": {
-    "ru": "Начинай опрос"
+    "ru": "Начинай опрос",
+    "en": "Start the survey",
+    "es": "Comenzar la encuesta"
   },
   "want_to_send_resume": {
-    "ru": "Отправить готовое резюме"
+    "ru": "Отправить готовое резюме",
+    "en": "Send a prepared resume",
+    "es": "Enviar un currículum preparado"
   },
   "skip_send_resume": {
-    "ru": "Приступить к анкетированию"
+    "ru": "Приступить к анкетированию",
+    "en": "Proceed to the questionnaire",
+    "es": "Proceder al cuestionario"
   },
   "ask_resume": {
-    "ru": "Если у вас есть готовое резюме, вы можете отправить его сюда в чат"
+    "ru": "Если у вас есть готовое резюме, вы можете отправить его сюда в чат",
+    "en": "If you have a prepared resume, you can send it here in the chat",
+    "es": "Si tiene un currículum preparado, puede enviarlo aquí en el chat"
   },
   "welcome_send_resume": {
-    "ru": "Пожалуйста, отправьте в чат файл с резюме"
+    "ru": "Пожалуйста, отправьте в чат файл с резюме",
+    "en": "Please send the resume file in the chat",
+    "es": "Por favor, envíe el archivo de currículum en el chat"
   },
   "document_uploaded": {
-    "ru": "Документ загружен успешно"
+    "ru": "Документ загружен успешно",
+    "en": "Document uploaded successfully",
+    "es": "Documento cargado con éxito"
   },
   "send_cv_and_finish": {
-    "ru": "Отправить имеющееся резюме и закончить"
+    "ru": "Отправить имеющееся резюме и закончить",
+    "en": "Send existing resume and finish",
+    "es": "Enviar currículum existente y terminar"
   },
   "go_to_survey": {
-    "ru": "Сразу перейти к анкетированию"
+    "ru": "Сразу перейти к анкетированию",
+    "en": "Go directly to the questionnaire",
+    "es": "Ir directamente al cuestionario"
   },
   "the_end": {
-    "ru": "Это всё"
+    "ru": "Это всё",
+    "en": "That's all",
+    "es": "Eso es todo"
   },
   "invalid_cv_format": {
-    "ru": "Разрешены только pdf, doc, docx форматы. Повторите попытку."
+    "ru": "Разрешены только pdf, doc, docx форматы. Повторите попытку.",
+    "en": "Only pdf, doc, docx formats are allowed. Please try again.",
+    "es": "Solo se permiten los formatos pdf, doc, docx. Inténtalo de nuevo."
   },
   "accept_document": {
-    "ru": "Подтвердить"
+    "ru": "Подтвердить",
+    "en": "Confirm",
+    "es": "Confirmar"
   },
   "confirm_document": {
-    "ru": "Отправить документ?"
+    "ru": "Отправить документ?",
+    "en": "Send document?",
+    "es": "¿Enviar documento?"
   },
   "confirm_create_new_resume": {
-    "ru": "Ответить"
+    "ru": "Ответить",
+    "en": "Answer",
+    "es": "Responder"
   },
   "ask_create_new_resume": {
-    "ru": "Ответите на пару дополнительных вопросов?"
+    "ru": "Ответите на пару дополнительных вопросов?",
+    "en": "Will you answer a couple of additional questions?",
+    "es": "¿Responderás a un par de preguntas adicionales?"
   },
   "finish": {
-    "ru": "Закончить"
+    "ru": "Закончить",
+    "en": "Finish",
+    "es": "Terminar"
   },
   "thanks_finish": {
-    "ru": "Спасибо. Всего доброго."
+    "ru": "Спасибо. Всего доброго.",
+    "en": "Thank you. All the best.",
+    "es": "Gracias. Todo lo mejor."
+  },
+  "choose_language": {
+    "ru": "Hello! In which language do you prefer to communicate with me?\n\n¡Hola! ¿En qué idioma prefieres comunicarte conmigo?\n\nЗдравствуйте! На каком языке вам удобнее общаться со мной?",
+    "en": "Hello! In which language do you prefer to communicate with me?\n\n¡Hola! ¿En qué idioma prefieres comunicarte conmigo?\n\nЗдравствуйте! На каком языке вам удобнее общаться со мной?",
+    "es": "Hello! In which language do you prefer to communicate with me?\n\n¡Hola! ¿En qué idioma prefieres comunicarte conmigo?\n\nЗдравствуйте! На каком языке вам удобнее общаться со мной?"
+  },
+  "langs": {
+    "ru": "Русский",
+    "en": "English",
+    "es": "Español"
   }
 }

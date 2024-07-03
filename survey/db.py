@@ -1,6 +1,5 @@
 import csv
 import enum
-import json
 import logging
 from typing import Optional, Any
 from sqlalchemy import create_engine, Column, Integer, String, JSON
@@ -23,11 +22,12 @@ class Config(Base):
     data = Column(JSON)
 
 
-class User(Base):
-    __tablename__ = 'user'
+class Users(Base):
+    __tablename__ = 'users'
 
     id = Column(Integer, primary_key=True)
-    tg_chat_id = Column(String)
+    lang = Column(String, nullable=True)
+    tg_chat_id = Column(String, unique=True)
     tg_data = Column(JSON)
     data = Column(JSON)
 
@@ -49,50 +49,50 @@ class SQLAlchemy:
 
         with self.Session() as session:
             if not session.query(Config).first():
-                config = Config(data=json.dumps({"params": params, "prompt": prompt}, ensure_ascii=False))
+                config = Config(data={"params": params, "prompt": prompt})
                 session.add(config)
                 session.commit()
 
     def get_params_and_prompt(self) -> tuple[list[str], str]:
         with self.Session() as session:
             config = session.query(Config).first()
-            data = json.loads(config.data)
+            data = config.data
             return data["params"], data["prompt"]
 
     def get_chat_data(self, tg_chat_id: str) -> Optional[dict]:
         with self.Session() as session:
-            user = session.query(User).filter_by(tg_chat_id=tg_chat_id).first()
-            return json.loads(user.data) if user else None
+            user = session.query(Users).filter_by(tg_chat_id=tg_chat_id).first()
+            return user.data if user else None
 
     def get_tg_data(self, tg_chat_id: str) -> Optional[dict]:
         with self.Session() as session:
-            user = session.query(User).filter_by(tg_chat_id=tg_chat_id).first()
-            return json.loads(user.tg_data) if user else None
+            user = session.query(Users).filter_by(tg_chat_id=tg_chat_id).first()
+            return user.tg_data if user else None
 
     def set_chat_data(self, tg_chat_id: str, data: dict):
         with self.Session() as session:
-            user = session.query(User).filter_by(tg_chat_id=tg_chat_id).first()
+            user = session.query(Users).filter_by(tg_chat_id=tg_chat_id).first()
             if user:
-                user.data = json.dumps(data, ensure_ascii=False)
+                user.data = data
             else:
-                user = User(tg_chat_id=tg_chat_id, data=json.dumps(data, ensure_ascii=False))
+                user = Users(tg_chat_id=tg_chat_id, data=data, ensure_ascii=False)
                 session.add(user)
             session.commit()
 
     def create_if_not_exist(self, tg_chat_id: str, tg_username: str):
-        tg_data = json.dumps({TgParam.username.value: tg_username}, ensure_ascii=False)
+        tg_data = {TgParam.username.value: tg_username}
         with self.Session() as session:
-            user = session.query(User).filter_by(tg_chat_id=tg_chat_id).first()
+            user = session.query(Users).filter_by(tg_chat_id=tg_chat_id).first()
             if user:
                 user.tg_data = tg_data
             else:
-                user = User(tg_chat_id=tg_chat_id, tg_data=tg_data, data=json.dumps({}, ensure_ascii=False))
+                user = Users(tg_chat_id=tg_chat_id, tg_data=tg_data, data={})
                 session.add(user)
             session.commit()
 
     def clear(self):
         with self.Session() as session:
-            session.query(User).delete()
+            session.query(Users).delete()
             session.commit()
 
     def write_file(self, temp_file, params: list[str], tg_params: list[str]):
@@ -103,10 +103,10 @@ class SQLAlchemy:
             return value and f"@{value}"
 
         with self.Session() as session:
-            rows = session.query(User.tg_data, User.data).all()
+            rows = session.query(Users.tg_data, Users.data).all()
             to_write = [[*tg_params, *params]]
             for row in rows:
-                tg_data, data = (json.loads(row[i]) if row[i] else {} for i in range(2))
+                tg_data, data = (row[i] if row[i] else {} for i in range(2))
                 params = data.get("params", {})
                 max_ind = max([int(k) for k in params.keys()] or [0])
                 to_append = [
@@ -130,7 +130,7 @@ class SQLAlchemy:
     def _set_config(self, params, prompt):
         with self.Session() as session:
             session.query(Config).delete()
-            config = Config(data=json.dumps({"params": params, "prompt": prompt}, ensure_ascii=False))
+            config = Config(data={"params": params, "prompt": prompt})
             session.add(config)
             session.commit()
 
@@ -154,3 +154,13 @@ class SQLAlchemy:
     def get_vacancy_name_by_id(self, value: int):
         with self.Session() as session:
             return session.query(Vacancy).filter_by(id=value).first()
+
+    def get_lang(self, tg_chat_id: str) -> Optional[dict]:
+        with self.Session() as session:
+            user = session.query(Users).filter_by(tg_chat_id=tg_chat_id).first()
+            return user.lang if user else None
+
+    def set_lang(self, tg_chat_id: str, value: str):
+        with self.Session() as session:
+            session.query(Users).filter_by(tg_chat_id=tg_chat_id).update({"lang": value})
+            session.commit()

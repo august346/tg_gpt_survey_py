@@ -1,7 +1,7 @@
 from dataclasses import dataclass
-from typing import Optional
+from typing import Optional, Union
 
-from . import db, gpt, tasks
+from . import db, gpt, tasks, utils
 
 
 @dataclass
@@ -22,6 +22,8 @@ class UserSurvey:
     survey: Survey
     _db: db.SQLAlchemy
     _start_tokens: int
+
+    _lang: Union[Optional[str], bool] = None
 
     @property
     def _data(self) -> dict:
@@ -120,3 +122,17 @@ class UserSurvey:
 
     def send_full_to_crm(self):
         tasks.send_full_to_srm.delay(self.tg_chat_id)
+
+    def translate(self, text: str) -> str:
+        return utils.get_text(text, self.get_lang() or "en")
+
+    def get_lang(self) -> Optional[str]:
+        if self._lang is None:
+            self._lang = self._db.get_lang(self.tg_chat_id) or False
+
+        return self._lang or None
+
+    def set_lang(self, value: str):
+        self._lang = value
+
+        self._db.set_lang(self.tg_chat_id, value)
