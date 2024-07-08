@@ -139,3 +139,45 @@ class GPT:
         if completion.choices[0].message.tool_calls:
             for call in message.tool_calls:
                 return json.loads(call.function.arguments)
+
+    @staticmethod
+    def get_cv_html(data: dict) -> Optional[str]:
+        messages: list[dict] = [
+            {
+                "role": GPT.Role.SYSTEM.value,
+                "content": open("files/prompt_cv.txt", "r", encoding="utf-8").read()
+            },
+            {
+                "role": GPT.Role.SYSTEM.value,
+                "content": json.dumps(data, ensure_ascii=False)
+            }
+        ]
+
+        completion = OpenAI(api_key=OPENAI_API_KEY).chat.completions.create(
+            messages=messages,
+            model=GPT_MODEL_NAME,
+            tool_choice="required",
+            tools=[{
+                "type": "function",
+                "function": {
+                    "name": "save_cv",
+                    "description": "Save the CV HTML summary",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "cv_html": {
+                                "type": "string",
+                                "description": "the HTML of CV"
+                            },
+                        },
+                        "required": ["cv_html"],
+                    }
+                }
+            }],
+        )
+
+        message: ChatCompletionMessage = completion.choices[0].message
+
+        if completion.choices[0].message.tool_calls:
+            for call in message.tool_calls:
+                return json.loads(call.function.arguments)["cv_html"]

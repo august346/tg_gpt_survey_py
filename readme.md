@@ -24,6 +24,7 @@ CELERY_BROKER_URL=redis://redis:6379/0
 #MINIO_BUCKET_NAME=cvs
 #BROKER_URL=redis://redis:6379/0
 #SOURCE_ID=24615   # default - without source_id in crm integration request
+#HTML_TO_PDF_FP=/bin/wkhtmltopdf
 ```
 
 ### Bot Commands

@@ -1,0 +1,112 @@
+Generate an HTML resume using the following data from next message.
+The Data is JSON. But result need as HTML plain text which I can use in email for sending it to my HR.
+Save generated resume.
+
+Ensure the HTML is well-structured and styled with basic CSS for readability.
+
+example result
+```
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>John Doe - Resume</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            margin: 20px;
+            padding: 20px;
+            background-color: #f4f4f4;
+        }
+        h1, h2 {
+            color: #333;
+        }
+        .contact-info, .section {
+            margin-bottom: 20px;
+        }
+        .section h2 {
+            border-bottom: 2px solid #333;
+            padding-bottom: 5px;
+        }
+        .contact-info p, .section p {
+            margin: 5px 0;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>John Doe</h1>
+
+    <div class="contact-info">
+        <p><strong>Email:</strong> john.doe@example.com</p>
+        <p><strong>Phone:</strong> (123) 456-7890</p>
+        <p><strong>LinkedIn:</strong> <a href="https://www.linkedin.com/in/johndoe">linkedin.com/in/johndoe</a></p>
+        <p><strong>GitHub:</strong> <a href="https://github.com/johndoe">github.com/johndoe</a></p>
+        <p><strong>Location:</strong> San Francisco, CA</p>
+    </div>
+
+    <div class="section">
+        <h2>Summary</h2>
+        <p>Full-stack software engineer with 5+ years of experience in developing scalable web applications using modern technologies. Proven ability to deliver high-quality software efficiently.</p>
+    </div>
+
+    <div class="section">
+        <h2>Experience</h2>
+        <p><strong>Software Engineer</strong></p>
+        <p><em>Tech Company Inc.</em> - <em>June 2020 - Present</em></p>
+        <ul>
+            <li>Developed web apps with JavaScript, React, Node.js</li>
+            <li>Implemented RESTful APIs and third-party integrations</li>
+            <li>Enhanced performance, reducing load times by 30%</li>
+        </ul>
+        <p><strong>Junior Software Engineer</strong></p>
+        <p><em>Startup XYZ</em> - <em>Jan 2018 - May 2020</em></p>
+        <ul>
+            <li>Assisted in developing a customer-facing app using Angular and Java</li>
+            <li>Wrote unit tests, performed code reviews</li>
+            <li>Contributed to agile processes and sprint planning</li>
+        </ul>
+    </div>
+
+    <div class="section">
+        <h2>Education</h2>
+        <p><strong>B.Sc. in Computer Science</strong></p>
+        <p><em>University of California, Berkeley</em> - <em>Graduated: May 2017</em></p>
+    </div>
+
+    <div class="section">
+        <h2>Skills</h2>
+        <p><strong>Languages:</strong> JavaScript, Java, Python</p>
+        <p><strong>Frameworks:</strong> React, Angular, Node.js</p>
+        <p><strong>Tools:</strong> Git, Docker, AWS</p>
+        <p><strong>Databases:</strong> MongoDB, MySQL</p>
+    </div>
+
+    <div class="section">
+        <h2>Projects</h2>
+        <p><strong>Personal Finance Manager</strong></p>
+        <p><em>React, Node.js, MongoDB</em> - <a href="https://github.com/johndoe/project-a">GitHub</a></p>
+        <p><strong>E-commerce Platform</strong></p>
+        <p><em>Angular, Java, MySQL</em> - <a href="https://github.com/johndoe/project-b">GitHub</a></p>
+    </div>
+
+    <div class="section">
+        <h2>Certifications</h2>
+        <p>CKA</p>
+        <p>AWS Solutions Architect</p>
+    </div>
+
+    <div class="section">
+        <h2>Interests</h2>
+        <p>Open-source contributions</p>
+        <p>Machine learning and AI</p>
+        <p>Hiking</p>
+    </div>
+
+</body>
+</html>
+```
+
+Save it via function

@@ -187,7 +187,7 @@ def prompt_f(message: MyMessage, bot: telebot.TeleBot):
     text = message.text.split('/prompt', 1)[-1].strip()
 
     if not text:
-        bot.send_message(message.chat.id, f"Current prompt:\n{message.config.prompt}")
+        bot.send_message(message.chat.id, "Current prompt:\n{}".format(message.config.prompt))
         return
 
     if not all(word in text for word in ["{data}"]):
@@ -204,7 +204,7 @@ def params_f(message: MyMessage, bot: telebot.TeleBot):
     text = message.text.split('/params', 1)[-1].strip()
 
     if not text:
-        bot.send_message(message.chat.id, f"Current params:\n{'\n'.join(message.config.params)}")
+        bot.send_message(message.chat.id, "Current params:\n{}".format('\n'.join(message.config.params)))
         return
 
     my_db.set_params(utils.extract_params_from_text(text))

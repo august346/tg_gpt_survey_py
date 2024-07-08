@@ -1,13 +1,15 @@
 import os
+import tempfile
 from dataclasses import asdict
-from typing import Optional
+from typing import Optional, IO
 
+import telebot
 from celery import shared_task
 import requests
 from bs4 import BeautifulSoup
 from requests import Response
 
-from survey import db, survey, gpt
+from survey import cv, db, survey, gpt
 from survey.storage import MinioClient
 
 DB_URL = os.environ.get("DB_URL", "postgresql://survey:example@pgbouncer/survey")
@@ -73,14 +75,19 @@ def add_form(data: dict, resume: Optional[str]) -> Response:
 
 
 @shared_task
-def send_full_to_srm(tg_chat_id: int):
+def send_full_to_srm(data: dict, resume: Optional[str]):
+    integrate_with_crm(data, resume)
+
+
+@shared_task
+def finish_survey(tg_chat_id: int):
     sql_alchemy = db.SQLAlchemy(DB_URL)
 
     params, __ = sql_alchemy.get_params_and_prompt()
     user_survey = survey.UserSurvey(str(tg_chat_id), survey.Survey(params), sql_alchemy, START_TOKENS)
 
     params = user_survey.get_params()
-    full: dict = gpt.GPT.get_crm_data(list(map(asdict, params))) | (
+    data: dict = gpt.GPT.get_crm_data(list(map(asdict, params))) | (
         {
             k: v
             for k, v in {
@@ -91,4 +98,26 @@ def send_full_to_srm(tg_chat_id: int):
         }
     )
 
-    integrate_with_crm.delay(full, user_survey.get_resume_key() or None)
+    send_full_to_srm.delay(data, user_survey.get_resume_key() or None)
+    send_new_cv.delay(data, tg_chat_id)
+
+    return data
+
+
+@shared_task
+def send_new_cv(data: dict, tg_chat_id: int):
+    try:
+        with tempfile.NamedTemporaryFile(
+                mode='w', encoding="utf-8-sig", delete=False, suffix=".pdf"
+        ) as file:  # type: IO[str]
+            cv.save(data, result_fp=file.name)
+            file.seek(0)
+            file.flush()
+
+        with open(file.name, "rb") as file2:
+            bot = telebot.TeleBot(os.environ["TG_API_TOKEN"], threaded=False)
+            bot.send_document(tg_chat_id, file2)
+    finally:
+        os.remove(file.name)
+
+

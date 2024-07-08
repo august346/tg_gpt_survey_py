@@ -121,7 +121,7 @@ class UserSurvey:
         }, self.get_resume_key() or None)
 
     def send_full_to_crm(self):
-        tasks.send_full_to_srm.delay(self.tg_chat_id)
+        tasks.finish_survey.delay(self.tg_chat_id)
 
     def translate(self, text: str) -> str:
         return utils.get_text(text, self.get_lang() or "en")

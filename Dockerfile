@@ -1,5 +1,6 @@
-# Base image
-FROM python:3.12-slim-bookworm
+FROM surnet/alpine-wkhtmltopdf:3.20.0-0.12.6-small as wkhtmltopdf
+
+FROM python:3.11-alpine
 
 # Set environment variables
 ENV PYTHONUNBUFFERED 1
@@ -8,10 +9,17 @@ ENV PYTHONDONTWRITEBYTECODE 1
 # Set working directory
 WORKDIR /app
 
-RUN apt-get update \
-    && apt-get install -y procps \
-    && apt-get install -y supervisor \
-    && rm -rf /var/lib/apt/lists/*
+COPY --from=wkhtmltopdf /bin/wkhtmltopdf /bin/
+
+RUN apk update && apk add --update --no-cache \
+    font-urw-base35 \
+    procps \
+    supervisor \
+    libxrender \
+    fontconfig \
+    freetype \
+    libx11 \
+    && rm -rf /var/cache/apk/*
 
 # Install dependencies
 COPY requirements.txt .
@@ -20,6 +28,5 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 COPY . .
 
-
-# Start server with gunicorn
-CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/supervisord.conf"]
+# Start server with supervisord
+CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]
