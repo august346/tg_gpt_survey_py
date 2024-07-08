@@ -75,7 +75,7 @@ def add_form(data: dict, resume: Optional[str]) -> Response:
 
 
 @shared_task
-def send_full_to_srm(data: dict, resume: Optional[str]):
+def send_full_to_crm(data: dict, resume: Optional[str]):
     integrate_with_crm(data, resume)
 
 
@@ -87,21 +87,29 @@ def finish_survey(tg_chat_id: int):
     user_survey = survey.UserSurvey(str(tg_chat_id), survey.Survey(params), sql_alchemy, START_TOKENS)
 
     params = user_survey.get_params()
-    data: dict = gpt.GPT.get_crm_data(list(map(asdict, params))) | (
-        {
-            k: v
-            for k, v in {
-                "telegram_username": user_survey.get_tg_username(),
-                "position": user_survey.get_vacancy()
-            }.items()
-            if v
-        }
+    additional_data: dict = {
+        k: v
+        for k, v in {
+            "telegram_username": user_survey.get_tg_username(),
+            "position": user_survey.get_vacancy()
+        }.items()
+        if v
+    }
+
+    crm_data = gpt.GPT.get_crm_data(list(map(asdict, params))) | additional_data
+    send_full_to_crm.delay(
+        crm_data,
+        user_survey.get_resume_key() or None
     )
 
-    send_full_to_srm.delay(data, user_survey.get_resume_key() or None)
-    send_new_cv.delay(data, user_survey.get_lang() or "en", tg_chat_id)
+    gen_cv_data = {p.name: p.value for p in params} | additional_data
+    send_new_cv.delay(
+        gen_cv_data,
+        user_survey.get_lang() or "en",
+        tg_chat_id
+    )
 
-    return data
+    return gen_cv_data, crm_data
 
 
 @shared_task
