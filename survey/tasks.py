@@ -9,7 +9,7 @@ import requests
 from bs4 import BeautifulSoup
 from requests import Response
 
-from survey import cv, db, survey, gpt
+from survey import cv, db, survey, gpt, utils
 from survey.storage import MinioClient
 
 DB_URL = os.environ.get("DB_URL", "postgresql://survey:example@pgbouncer/survey")
@@ -99,13 +99,13 @@ def finish_survey(tg_chat_id: int):
     )
 
     send_full_to_srm.delay(data, user_survey.get_resume_key() or None)
-    send_new_cv.delay(data, tg_chat_id)
+    send_new_cv.delay(data, user_survey.get_lang() or "en", tg_chat_id)
 
     return data
 
 
 @shared_task
-def send_new_cv(data: dict, tg_chat_id: int):
+def send_new_cv(data: dict, lang: str, tg_chat_id: int):
     try:
         with tempfile.NamedTemporaryFile(
                 mode='w', encoding="utf-8-sig", delete=False, suffix=".pdf"
@@ -116,7 +116,7 @@ def send_new_cv(data: dict, tg_chat_id: int):
 
         with open(file.name, "rb") as file2:
             bot = telebot.TeleBot(os.environ["TG_API_TOKEN"], threaded=False)
-            bot.send_document(tg_chat_id, file2)
+            bot.send_document(tg_chat_id, file2, caption=utils.get_text("cv_bonus", lang))
     finally:
         os.remove(file.name)
 

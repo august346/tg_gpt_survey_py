@@ -138,5 +138,10 @@
     "ru": "Русский",
     "en": "English",
     "es": "Español"
+  },
+  "cv_bonus": {
+    "ru": "Бонусом мы прилагаем получившееся резюме.",
+    "en": "As a bonus, we include the completed resume.",
+    "es": "Como bono, adjuntamos el currículum completado."
   }
 }
