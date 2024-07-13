@@ -1,5 +1,6 @@
 import os
 import tempfile
+from copy import deepcopy
 from dataclasses import asdict
 from typing import Optional, IO
 
@@ -49,8 +50,13 @@ def collect():
 
 @shared_task(bind=True, default_retry_delay=60, max_retries=3)
 def integrate_with_crm(self, candidate_data, resume):
+    payload: dict = deepcopy(candidate_data)
+    for param, value in list(payload.items()):
+        if value and isinstance(value, list):
+            payload.pop(param)
+            payload[f"{param}[]"] = value
     try:
-        response = add_form(candidate_data, resume)
+        response = add_form(payload, resume)
         return response.status_code, response.text
     except Exception as exc:
         raise self.retry(exc=exc)
@@ -76,7 +82,7 @@ def add_form(data: dict, resume: Optional[str]) -> Response:
 
 @shared_task
 def send_full_to_crm(data: dict, resume: Optional[str]):
-    integrate_with_crm(data, resume)
+    return integrate_with_crm(data, resume)
 
 
 @shared_task
