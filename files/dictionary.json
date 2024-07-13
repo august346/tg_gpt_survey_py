@@ -135,9 +135,9 @@
     "es": "Hello! In which language do you prefer to communicate with me?\n\n¡Hola! ¿En qué idioma prefieres comunicarte conmigo?\n\nЗдравствуйте! На каком языке вам удобнее общаться со мной?"
   },
   "langs": {
-    "ru": "Русский",
     "en": "English",
-    "es": "Español"
+    "es": "Español",
+    "ru": "Русский"
   },
   "cv_bonus": {
     "ru": "Бонусом мы прилагаем получившееся резюме.",
