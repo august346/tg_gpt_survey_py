@@ -1,3 +1,4 @@
+import logging
 import os
 import tempfile
 from copy import deepcopy
@@ -17,7 +18,11 @@ DB_URL = os.environ.get("DB_URL", "postgresql://survey:example@pgbouncer/survey"
 CRM_API_KEY: str = os.environ["CRM_API_KEY"]
 START_TOKENS: int = int(os.environ.get("START_TOKENS", 50_000))
 SOURCE_ID: Optional[str] = None if (sid := os.environ.get("SOURCE_ID")) is None else int(sid)
-CRM_URL: str = "https://smarthr.peopleforce.io/api/public/v2/recruitment/candidates"
+CRM_CRATE_URL: str = "https://smarthr.peopleforce.io/api/public/v2/recruitment/candidates"
+
+
+def get_crm_update_url(crm_candidate_id: int) -> str:
+    return f"https://smarthr.peopleforce.io/api/public/v2/recruitment/candidates/{crm_candidate_id}"
 
 
 @shared_task(bind=True, default_retry_delay=60, max_retries=1)
@@ -49,24 +54,44 @@ def collect():
 
 
 @shared_task(bind=True, default_retry_delay=60, max_retries=3)
-def integrate_with_crm(self, candidate_data, resume):
+def integrate_with_crm(self, tg_chat_id: str, candidate_data: dict, resume: Optional[str]):
     payload: dict = deepcopy(candidate_data)
     for param, value in list(payload.items()):
         if value and isinstance(value, list):
             payload.pop(param)
             payload[f"{param}[]"] = value
+
+    my_db: db.SQLAlchemy = db.SQLAlchemy(DB_URL)
+    crm_candidate_id: Optional[int] = my_db.get_crm_candidate_id(tg_chat_id)
+
     try:
-        response = add_form(payload, resume)
-        return response.status_code, response.text
-    except Exception as exc:
-        raise self.retry(exc=exc)
+        response = send_request(crm_candidate_id, payload, resume)
+    except Exception as e:
+        raise self.retry(exc=e)
+
+    try:
+        if crm_candidate_id is None:
+            crm_candidate_id = response.json()["data"]["id"]
+            my_db.set_crm_candidate_id(tg_chat_id, crm_candidate_id)
+    except Exception as e:
+        logging.error(f"An error occurred while setting {crm_candidate_id=} for {tg_chat_id=}: {e}")
+
+    return response.status_code, response.text
 
 
-def add_form(data: dict, resume: Optional[str]) -> Response:
+def send_request(crm_candidate_id: Optional[int], data: dict, resume: Optional[str]) -> Response:
+    url: str
+    method: str
+    if crm_candidate_id is None:
+        method, url = "POST", CRM_CRATE_URL
+    else:
+        method, url = "PUT", get_crm_update_url(crm_candidate_id)
+
     payload = data if SOURCE_ID is None else (data | {"source_id": SOURCE_ID})
 
-    response = requests.post(
-        CRM_URL,
+    response = requests.request(
+        method=method,
+        url=url,
         data=payload,
         headers={
             "Accept": "application/json",
@@ -75,14 +100,16 @@ def add_form(data: dict, resume: Optional[str]) -> Response:
         files={'resume': (resume, MinioClient().get(resume), 'application/octet-stream')} if resume else None
     )
 
-    assert response.status_code == 201, f"failed crm integration: code={response.status_code}, text={response.text}"
+    assert response.status_code in {200, 201}, (
+        f"failed crm integration: response code={response.status_code}, text={response.text}; request {method=}, {url=}, {payload=}"
+    )
 
     return response
 
 
 @shared_task
-def send_full_to_crm(data: dict, resume: Optional[str]):
-    return integrate_with_crm(data, resume)
+def send_full_to_crm(tg_chat_id: str, data: dict, resume: Optional[str]):
+    return integrate_with_crm(tg_chat_id, data, resume)
 
 
 @shared_task
@@ -104,8 +131,9 @@ def finish_survey(tg_chat_id: int):
 
     crm_data = gpt.GPT.get_crm_data(list(map(asdict, params))) | additional_data
     send_full_to_crm.delay(
+        user_survey.tg_chat_id,
         crm_data,
-        user_survey.get_resume_key() or None
+        None
     )
 
     gen_cv_data = {p.name: p.value for p in params} | additional_data

@@ -2,7 +2,7 @@ import csv
 import enum
 import logging
 from typing import Optional, Any
-from sqlalchemy import create_engine, Column, Integer, String, JSON
+from sqlalchemy import create_engine, Column, Integer, String, JSON, BigInteger
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
@@ -30,6 +30,7 @@ class Users(Base):
     tg_chat_id = Column(String, unique=True)
     tg_data = Column(JSON)
     data = Column(JSON)
+    crm_candidate_id = Column(BigInteger, nullable=True)
 
 
 class Vacancy(Base):
@@ -163,4 +164,13 @@ class SQLAlchemy:
     def set_lang(self, tg_chat_id: str, value: str):
         with self.Session() as session:
             session.query(Users).filter_by(tg_chat_id=tg_chat_id).update({"lang": value})
+            session.commit()
+
+    def get_crm_candidate_id(self, tg_chat_id: str) -> Optional[int]:
+        with self.Session() as session:
+            return session.query(Users.crm_candidate_id).filter_by(tg_chat_id=tg_chat_id).first()[0]
+
+    def set_crm_candidate_id(self, tg_chat_id: str, value: int):
+        with self.Session() as session:
+            session.query(Users).filter_by(tg_chat_id=tg_chat_id).update({"crm_candidate_id": value})
             session.commit()

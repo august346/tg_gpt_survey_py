@@ -114,7 +114,7 @@ class UserSurvey:
         self._db.set_chat_data(self.tg_chat_id, data)
 
     def send_short_to_crm(self):
-        tasks.integrate_with_crm.delay({
+        tasks.integrate_with_crm.delay(self.tg_chat_id, {
             "telegram_username": self._tg_username,
             "position": self.get_vacancy(),
             "full_name": "N/A",
