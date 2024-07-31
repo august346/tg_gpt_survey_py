@@ -41,8 +41,8 @@ def collect():
     vacancies = []
 
     for card in soup.find_all("div", class_="card card-hover"):
-        h3 = card.find("h3")
-        a = h3.find("a")
+        # h3 = card.find("h3")
+        a = card.find("a")
         vacancy_name = a.get_text(strip=True)
         vacancies.append(vacancy_name)
 
